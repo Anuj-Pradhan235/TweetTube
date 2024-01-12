@@ -260,7 +260,9 @@ const updateUserAvatar=asyncHandler(async(req,res)=>{
   const avatarLocalPath=req.file?.path
   if(!avatarLocalPath)throw new ApiError(400,"Avatar file is missing");
   const avatar=await uploadOnCloudinary(avatarLocalPath);
+
   if(!avatar.url)throw new ApiError(400,"Error while uploading on cloudinary")
+  // const publicUrl=await User.findById(req.user?._id).avatar;
  const user=await User.findByIdAndUpdate(req.user?._id,{
 $set:{
   avatar:avatar.url
@@ -268,7 +270,7 @@ $set:{
 },{
   new:true
 }).select("-password")
-
+// deleteImageFromCloudinary(publicUrl)
 return res
 .status(200)
 .json(new ApiResponse(200,user,"Avatar updated sccuessfully"))
@@ -280,6 +282,7 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
   if(!coverImageLocalPath)throw new ApiError(400,"CoverImage file is missing");
   const coverImage=await uploadOnCloudinary(coverImageLocalPath);
   if(!coverImage.url)throw new ApiError(400,"Error while uploading on cloudinary")
+  // const publicUrl=await User.findById(req.user?._id).coverImage;
  const user=await User.findByIdAndUpdate(req.user?._id,{
 $set:{
   coverImage:coverImage.url
@@ -288,11 +291,62 @@ $set:{
   new:true
 }).select("-password")
 
+// deleteImageFromCloudinary(publicUrl);
 return res
 .status(200)
 .json(new ApiResponse(200,user,"CoverImage updated sccuessfully"))
 
 })
+
+
+
+
+
+const deleteImageFromCloudinary=async(publicUrl)=> {
+  // Extract public ID from the public URL
+  const publicId = extractPublicId(publicUrl);
+
+  // Construct the Cloudinary API endpoint
+  const apiUrl = `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/delete/image/${publicId}`;
+
+  // Prepare headers for authentication
+  const headers = new Headers({
+      'Authorization': 'Basic ' + btoa(`${process.env.CLOUDINARY_API_KEY}:${process.env.CLOUDINARY_CLOUD_API_SECRET}`)
+  });
+
+  // Make a DELETE request to the Cloudinary API
+ await fetch(apiUrl, {
+      method: 'DELETE',
+      headers: headers
+  })
+  .then(response => {
+      if (!response.ok) {
+          throw new Error(`Failed to delete image: ${response.status} ${response.statusText}`);
+      }
+      console.log('Image deleted successfully');
+  })
+  .catch(error => {
+      console.error('Error deleting image:', error.message);
+  });
+}
+
+
+function extractPublicId(publicUrl) {
+  // Extract the public ID from the URL (assuming a common Cloudinary URL structure)
+  const match = publicUrl.match(/\/([^\/]+?)\.(jpg|jpeg|png|gif|svg|webp)$/);
+  return match ? match[1] : null;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 export {
   registerUser,
@@ -302,5 +356,6 @@ export {
   changeCurrentPassword,
   getCurrentUser,
   updateAccountDetails,
-  updateUserAvatar
+  updateUserAvatar,
+  updateUserCoverImage
 };
